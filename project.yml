@@ -50,3 +50,4 @@ targets:
         product: FirebaseFirestore
       - package: Firebase
         product: FirebaseAuth
+      - product: FirebaseDatabase

@@ -21,10 +21,13 @@ struct MainTabView: View {
         }
     }
 
+    private var pendingCancellations: Int {
+        fb.bookings.filter { $0.status == "cancellation_requested" }.count
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
 
-            // Content
             Group {
                 switch selectedTab {
                 case .profile:
@@ -37,12 +40,16 @@ struct MainTabView: View {
             }
             .transition(.opacity)
 
-            // Custom tab bar
             tabBar
         }
         .ignoresSafeArea(edges: .bottom)
         .sheet(isPresented: $showSettings) {
             SettingsSheet()
+        }
+        .task {
+            if let braiderId = fb.myBraider?.id, !braiderId.isEmpty {
+                _ = await fb.fetchBookings(forBraiderId: braiderId)
+            }
         }
     }
 
@@ -101,9 +108,4 @@ struct MainTabView: View {
         }
         .buttonStyle(SoftPress())
     }
-
-    .task {
-        if let braiderId = fb.myBraider?.id, !braiderId.isEmpty {
-            _ = await fb.fetchBookings(forBraiderId: braiderId)
-        }
-    }
+}

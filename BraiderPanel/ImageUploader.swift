@@ -1,16 +1,8 @@
 import Foundation
 import UIKit
 
-// MARK: - ImgBB Image Uploader
-//
-// Uploads a UIImage to ImgBB, returns the public URL.
-// Get a free API key at https://api.imgbb.com/
-//
-// REPLACE the placeholder below with your key.
-
 enum ImageUploader {
 
-    // ⬇️ PASTE YOUR IMGBB API KEY HERE
     static let imgbbAPIKey = "18c6a61ec367759efb34efff230a1eae"
 
     private static let endpoint = "https://api.imgbb.com/1/upload"
@@ -38,15 +30,12 @@ enum ImageUploader {
         }
     }
 
-    /// Uploads a UIImage and returns the direct public URL.
-    /// Runs on the main actor's async context — call with `try await`.
     static func upload(_ image: UIImage) async throws -> String {
-        guard imgbbAPIKey != "18c6a61ec367759efb34efff230a1eae",
-              !imgbbAPIKey.isEmpty else {
+        guard !imgbbAPIKey.isEmpty,
+              imgbbAPIKey.count >= 20 else {
             throw UploadError.missingKey
         }
 
-        // Downscale to keep uploads fast and under any size limits
         let resized = image.resized(maxDimension: 1600)
         guard let data = resized.jpegData(compressionQuality: 0.85) else {
             throw UploadError.encodingFailed
@@ -63,7 +52,6 @@ enum ImageUploader {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        // imgbb expects `image=<base64>` as form data
         let body = "image=\(base64.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? base64)"
         request.httpBody = body.data(using: .utf8)
 
@@ -95,10 +83,7 @@ enum ImageUploader {
     }
 }
 
-// MARK: - UIImage helpers
-
 extension UIImage {
-    /// Returns a resized copy where the largest dimension is capped to `maxDimension`.
     func resized(maxDimension: CGFloat) -> UIImage {
         let largest = max(size.width, size.height)
         guard largest > maxDimension else { return self }

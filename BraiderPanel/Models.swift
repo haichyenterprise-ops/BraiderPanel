@@ -1,28 +1,28 @@
 import Foundation
 import CoreLocation
 
-// MARK: - Braider (Firestore doc at braiders/{uid})
+// MARK: - Braider
 
 struct Braider: Identifiable, Hashable {
-    let id: String                       // Firebase Auth UID
+    let id: String
     var name: String
     var tagline: String
-    var avatarUrl: String                // profile picture
-    var coverUrl: String                 // hero image
+    var avatarUrl: String
+    var coverUrl: String
     var latitude: Double
     var longitude: Double
     var rating: Double
     var reviewCount: Int
     var priceFrom: Int
-    var bio: String                      // short — shown on hero
-    var story: String                    // long — shown in About
+    var bio: String
+    var story: String
     var city: String
     var specialties: [String]
     var yearsExperience: Int
     var responseTime: String
     var verified: Bool
     var onboarded: Bool
-    var published: Bool                  // true once at least 1 service exists
+    var published: Bool
     var phone: String
     var email: String
     var dateOfBirth: Date?
@@ -30,8 +30,8 @@ struct Braider: Identifiable, Hashable {
     var businessAddress: Address
     var portfolio: [PortfolioItem]
     var services: [BraidService]
-    var availableSlots: [String: [String]]
-    var availableDates: [Date]
+    var availableSlots: [String: [String]]      // legacy — used as fallback
+    var availableDates: [Date]                   // legacy — used as fallback
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -40,64 +40,33 @@ struct Braider: Identifiable, Hashable {
     static func == (lhs: Braider, rhs: Braider) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 
-    /// Empty draft used during onboarding
     static func draft(uid: String, email: String) -> Braider {
         Braider(
-            id: uid,
-            name: "",
-            tagline: "",
-            avatarUrl: "",
-            coverUrl: "",
-            latitude: 52.4862,
-            longitude: -1.8904,
-            rating: 0,
-            reviewCount: 0,
-            priceFrom: 0,
-            bio: "",
-            story: "",
-            city: "Birmingham",
-            specialties: [],
-            yearsExperience: 0,
-            responseTime: "~30 min",
-            verified: false,
-            onboarded: false,
-            published: false,
-            phone: "",
-            email: email,
-            dateOfBirth: nil,
-            privateAddress: .empty,
-            businessAddress: .empty,
-            portfolio: [],
-            services: [],
-            availableSlots: [:],
-            availableDates: []
+            id: uid, name: "", tagline: "", avatarUrl: "", coverUrl: "",
+            latitude: 52.4862, longitude: -1.8904,
+            rating: 0, reviewCount: 0, priceFrom: 0,
+            bio: "", story: "", city: "Birmingham",
+            specialties: [], yearsExperience: 0, responseTime: "~30 min",
+            verified: false, onboarded: false, published: false,
+            phone: "", email: email, dateOfBirth: nil,
+            privateAddress: .empty, businessAddress: .empty,
+            portfolio: [], services: [],
+            availableSlots: [:], availableDates: []
         )
     }
 
-    /// Dictionary for Firestore write
     var dictionary: [String: Any] {
         var d: [String: Any] = [
-            "id": id,
-            "name": name,
-            "tagline": tagline,
-            "avatarUrl": avatarUrl,
-            "coverUrl": coverUrl,
-            "latitude": latitude,
-            "longitude": longitude,
-            "rating": rating,
-            "reviewCount": reviewCount,
-            "priceFrom": priceFrom,
-            "bio": bio,
-            "story": story,
-            "city": city,
-            "specialties": specialties,
+            "id": id, "name": name, "tagline": tagline,
+            "avatarUrl": avatarUrl, "coverUrl": coverUrl,
+            "latitude": latitude, "longitude": longitude,
+            "rating": rating, "reviewCount": reviewCount,
+            "priceFrom": priceFrom, "bio": bio, "story": story,
+            "city": city, "specialties": specialties,
             "yearsExperience": yearsExperience,
             "responseTime": responseTime,
-            "verified": verified,
-            "onboarded": onboarded,
-            "published": published,
-            "phone": phone,
-            "email": email,
+            "verified": verified, "onboarded": onboarded, "published": published,
+            "phone": phone, "email": email,
             "privateAddress": privateAddress.dictionary,
             "businessAddress": businessAddress.dictionary,
             "portfolio": portfolio.map { $0.dictionary },
@@ -123,19 +92,11 @@ struct Address: Hashable, Codable {
     static let empty = Address(line1: "", line2: "", city: "", postcode: "", country: "United Kingdom")
 
     var dictionary: [String: Any] {
-        [
-            "line1": line1,
-            "line2": line2,
-            "city": city,
-            "postcode": postcode,
-            "country": country
-        ]
+        ["line1": line1, "line2": line2, "city": city, "postcode": postcode, "country": country]
     }
 
     var oneLine: String {
-        [line1, line2, city, postcode]
-            .filter { !$0.isEmpty }
-            .joined(separator: ", ")
+        [line1, line2, city, postcode].filter { !$0.isEmpty }.joined(separator: ", ")
     }
 }
 
@@ -149,27 +110,15 @@ struct PortfolioItem: Identifiable, Hashable {
     var likes: Int
 
     var dictionary: [String: Any] {
-        [
-            "id": id,
-            "imageUrl": imageUrl,
-            "caption": caption,
-            "tag": tag,
-            "likes": likes
-        ]
+        ["id": id, "imageUrl": imageUrl, "caption": caption, "tag": tag, "likes": likes]
     }
 
     static func empty() -> PortfolioItem {
-        PortfolioItem(
-            id: UUID().uuidString,
-            imageUrl: "",
-            caption: "",
-            tag: "",
-            likes: 0
-        )
+        PortfolioItem(id: UUID().uuidString, imageUrl: "", caption: "", tag: "", likes: 0)
     }
 }
 
-// MARK: - Service (formerly BraidStyle)
+// MARK: - Service (with per-service availability)
 
 struct BraidService: Identifiable, Hashable {
     let id: String
@@ -180,6 +129,8 @@ struct BraidService: Identifiable, Hashable {
     var durationMinutes: Int
     var includes: [String]
     var popular: Bool
+    var availableDates: [Date]
+    var availableSlots: [String: [String]]
 
     var dictionary: [String: Any] {
         [
@@ -190,35 +141,60 @@ struct BraidService: Identifiable, Hashable {
             "priceFrom": priceFrom,
             "durationMinutes": durationMinutes,
             "includes": includes,
-            "popular": popular
+            "popular": popular,
+            "availableDates": availableDates,
+            "availableSlots": availableSlots
         ]
     }
 
     static func empty() -> BraidService {
         BraidService(
             id: UUID().uuidString,
-            name: "",
-            description: "",
-            imageUrl: "",
-            priceFrom: 0,
-            durationMinutes: 120,
-            includes: [],
-            popular: false
+            name: "", description: "", imageUrl: "",
+            priceFrom: 0, durationMinutes: 120,
+            includes: [], popular: false,
+            availableDates: [], availableSlots: [:]
         )
+    }
+
+    /// True if any date has at least one time slot
+    var hasAvailability: Bool {
+        !availableDates.isEmpty && availableSlots.values.contains { !$0.isEmpty }
     }
 }
 
-// MARK: - Review (read-only in this app, but needed for the profile view)
+// MARK: - Reviews
 
 struct Review: Identifiable, Hashable {
     let id: String
+    let userId: String
     let userName: String
     let userAvatar: String
     let text: String
     let rating: Double
-    let date: String
+    let date: Date
     let styleDone: String
     let helpful: Int
+
+    var dictionary: [String: Any] {
+        [
+            "id": id,
+            "userId": userId,
+            "userName": userName,
+            "userAvatar": userAvatar,
+            "text": text,
+            "rating": rating,
+            "date": date,
+            "styleDone": styleDone,
+            "helpful": helpful
+        ]
+    }
+
+    var dateString: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
 }
 
 struct RatingBreakdown: Hashable {
@@ -237,9 +213,23 @@ struct RatingBreakdown: Hashable {
     }
 
     static let empty = RatingBreakdown(five: 0, four: 0, three: 0, two: 0, one: 0)
+
+    static func from(_ reviews: [Review]) -> RatingBreakdown {
+        var f = 0, fo = 0, t = 0, tw = 0, o = 0
+        for r in reviews {
+            switch Int(r.rating.rounded()) {
+            case 5: f += 1
+            case 4: fo += 1
+            case 3: t += 1
+            case 2: tw += 1
+            default: o += 1
+            }
+        }
+        return RatingBreakdown(five: f, four: fo, three: t, two: tw, one: o)
+    }
 }
 
-// MARK: - Booking (braider sees these)
+// MARK: - Booking
 
 struct Booking: Identifiable, Codable {
     let id: String

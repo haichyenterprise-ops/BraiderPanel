@@ -118,33 +118,13 @@ struct EditServicesSheet: View {
                         }
                     }
                 }
-
-                Button {
-                    Haptics.medium()
-                    editingService = BraidService.empty()
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 16))
-                        Text("Add another service")
-                            .font(AppTheme.sans(15, weight: .semibold))
-                    }
-                    .foregroundColor(AppTheme.accentDeep)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(AppTheme.accentSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(AppTheme.accent.opacity(0.3), lineWidth: 1)
-                    )
-                }
-                .buttonStyle(SoftPress())
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
     }
+
+    // MARK: - Footer (add button always visible)
 
     private var footer: some View {
         VStack(spacing: 10) {
@@ -156,8 +136,33 @@ struct EditServicesSheet: View {
                     Text("At least one service needs a name and photo to go live.")
                         .font(AppTheme.sans(12, weight: .medium))
                         .foregroundColor(AppTheme.warn)
+                        .multilineTextAlignment(.leading)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            // Add another service — always visible now
+            Button {
+                Haptics.medium()
+                editingService = BraidService.empty()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 16))
+                    Text("Add \(services.isEmpty ? "your first" : "another") service")
+                        .font(AppTheme.sans(15, weight: .semibold))
+                }
+                .foregroundColor(AppTheme.accentDeep)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(AppTheme.accentSoft)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(AppTheme.accent.opacity(0.3), lineWidth: 1)
+                )
+            }
+            .buttonStyle(SoftPress())
 
             PrimaryButton(
                 title: saving ? "Saving…" : "Save services",
@@ -181,7 +186,7 @@ struct EditServicesSheet: View {
         Haptics.medium()
 
         let dicts = services.map { $0.dictionary }
-        let minPrice = services.map { $0.priceFrom }.min() ?? 0
+        let minPrice = services.map { $0.priceFrom }.filter { $0 > 0 }.min() ?? 0
         let hasValid = services.contains { !$0.name.isEmpty && !$0.imageUrl.isEmpty }
 
         Task {
@@ -255,6 +260,16 @@ struct ServiceEditableRow: View {
                         Text("\(service.durationMinutes / 60)h \(service.durationMinutes % 60)m")
                             .font(AppTheme.sans(12))
                             .foregroundColor(AppTheme.slate)
+                    }
+
+                    if !service.availableDates.isEmpty {
+                        Text("\(service.availableDates.count) date\(service.availableDates.count == 1 ? "" : "s") available")
+                            .font(AppTheme.sans(11))
+                            .foregroundColor(AppTheme.sage)
+                    } else {
+                        Text("No availability set")
+                            .font(AppTheme.sans(11))
+                            .foregroundColor(AppTheme.warn)
                     }
                 }
 

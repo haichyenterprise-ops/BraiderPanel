@@ -15,6 +15,10 @@ struct EditServiceDetailSheet: View {
     @State private var includes: [String]
     @State private var newInclude = ""
 
+    @State private var availableDates: [Date]
+    @State private var availableSlots: [String: [String]]
+    @State private var showAvailabilityEditor = false
+
     init(service: BraidService, onSave: @escaping (BraidService) -> Void) {
         self.service = service
         self.onSave = onSave
@@ -25,10 +29,16 @@ struct EditServiceDetailSheet: View {
         _durationMinutes = State(initialValue: service.durationMinutes)
         _popular = State(initialValue: service.popular)
         _includes = State(initialValue: service.includes)
+        _availableDates = State(initialValue: service.availableDates)
+        _availableSlots = State(initialValue: service.availableSlots)
     }
 
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && !imageUrl.isEmpty
+    }
+
+    private var totalSlots: Int {
+        availableSlots.values.reduce(0) { $0 + $1.count }
     }
 
     var body: some View {
@@ -42,6 +52,7 @@ struct EditServiceDetailSheet: View {
                         nameBlock
                         priceAndDuration
                         descriptionBlock
+                        availabilityBlock     // NEW
                         includesBlock
                         popularToggle
                         Color.clear.frame(height: 40)
@@ -63,6 +74,13 @@ struct EditServiceDetailSheet: View {
                         .foregroundColor(isValid ? AppTheme.ink : AppTheme.stone)
                         .disabled(!isValid)
                 }
+            }
+            .sheet(isPresented: $showAvailabilityEditor) {
+                ServiceAvailabilityEditor(
+                    serviceName: name.isEmpty ? "this service" : name,
+                    availableDates: $availableDates,
+                    availableSlots: $availableSlots
+                )
             }
         }
     }
@@ -225,6 +243,58 @@ struct EditServiceDetailSheet: View {
         }
     }
 
+    // MARK: - Availability (NEW)
+
+    private var availabilityBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Availability for this service")
+
+            Button {
+                Haptics.soft()
+                showAvailabilityEditor = true
+            } label: {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(availableDates.isEmpty ? AppTheme.warn.opacity(0.15) : AppTheme.sage.opacity(0.15))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(availableDates.isEmpty ? AppTheme.warn : AppTheme.sage)
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(availableDates.isEmpty ? "No dates set" : "\(availableDates.count) date\(availableDates.count == 1 ? "" : "s") · \(totalSlots) slots")
+                            .font(AppTheme.sans(15, weight: .semibold))
+                            .foregroundColor(AppTheme.ink)
+                        Text(availableDates.isEmpty
+                             ? "Tap to set when this service is bookable."
+                             : "Tap to edit dates and times.")
+                            .font(AppTheme.sans(12))
+                            .foregroundColor(AppTheme.slate)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(AppTheme.stone)
+                }
+                .padding(16)
+                .background(AppTheme.snow)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            availableDates.isEmpty ? AppTheme.warn.opacity(0.4) : AppTheme.hairline,
+                            lineWidth: 1
+                        )
+                )
+            }
+            .buttonStyle(CardPress())
+        }
+    }
+
     // MARK: - Includes
 
     private var includesBlock: some View {
@@ -257,78 +327,44 @@ struct EditServiceDetailSheet: View {
                     .frame(height: 34)
                     .background(AppTheme.accentSoft, in: Capsule())
                 }
-
-                if !newInclude.isEmpty {
-                    HStack(spacing: 6) {
-                        TextField("", text: $newInclude)
-                            .font(AppTheme.sans(13, weight: .medium))
-                            .foregroundColor(AppTheme.ink)
-                            .frame(width: 80)
-                        Button {
-                            addInclude()
-                        } label: {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(6)
-                                .background(AppTheme.accent, in: Circle())
-                        }
-                    }
-                    .padding(.leading, 10)
-                    .padding(.trailing, 6)
-                    .frame(height: 34)
-                    .background(AppTheme.accentSoft, in: Capsule())
-                } else {
-                    Button {
-                        Haptics.soft()
-                        newInclude = " "
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 11, weight: .bold))
-                            Text("Add item")
-                                .font(AppTheme.sans(13, weight: .semibold))
-                        }
-                        .foregroundColor(AppTheme.accentDeep)
-                        .padding(.horizontal, 12)
-                        .frame(height: 34)
-                        .background(AppTheme.accentSoft, in: Capsule())
-                        .overlay(Capsule().stroke(AppTheme.accent.opacity(0.3), lineWidth: 1))
-                    }
-                    .buttonStyle(SoftPress())
-                }
             }
 
-            if !newInclude.isEmpty {
-                HStack(spacing: 10) {
-                    TextField("e.g. Hair included", text: $newInclude)
-                        .font(AppTheme.sans(14))
-                        .padding(.horizontal, 14)
-                        .frame(height: 44)
-                        .background(AppTheme.snow)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(AppTheme.hairline, lineWidth: 1)
+            HStack(spacing: 10) {
+                TextField("e.g. Hair included", text: $newInclude)
+                    .font(AppTheme.sans(14))
+                    .padding(.horizontal, 14)
+                    .frame(height: 44)
+                    .background(AppTheme.snow)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(AppTheme.hairline, lineWidth: 1)
+                    )
+                    .submitLabel(.done)
+                    .onSubmit { addInclude() }
+
+                Button {
+                    addInclude()
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            newInclude.trimmingCharacters(in: .whitespaces).isEmpty
+                            ? AppTheme.stone
+                            : AppTheme.ink,
+                            in: RoundedRectangle(cornerRadius: 12)
                         )
-                    Button {
-                        addInclude()
-                    } label: {
-                        Text("Add")
-                            .font(AppTheme.sans(13, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .frame(height: 44)
-                            .background(AppTheme.ink, in: Capsule())
-                    }
                 }
+                .disabled(newInclude.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
     }
 
     private func addInclude() {
         let trimmed = newInclude.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { newInclude = ""; return }
+        guard !trimmed.isEmpty else { return }
         Haptics.success()
         withAnimation {
             includes.append(trimmed)
@@ -395,7 +431,9 @@ struct EditServiceDetailSheet: View {
             priceFrom: priceFrom,
             durationMinutes: durationMinutes,
             includes: includes,
-            popular: popular
+            popular: popular,
+            availableDates: availableDates.sorted(),
+            availableSlots: availableSlots
         )
         onSave(updated)
     }

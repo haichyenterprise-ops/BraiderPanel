@@ -88,18 +88,22 @@ struct MainTabView: View {
             )
             .clipShape(Capsule())
             .overlay(alignment: .topTrailing) {
-                if tab == .bookings && newBookingCount > 0 && !active {
-                    Circle()
-                        .fill(AppTheme.rose)
-                        .frame(width: 8, height: 8)
-                        .offset(x: -4, y: 4)
+                if tab == .bookings && pendingCancellations > 0 && !active {
+                    Text("\(pendingCancellations)")
+                        .font(AppTheme.sans(9, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(minWidth: 16, minHeight: 16)
+                        .padding(.horizontal, 4)
+                        .background(AppTheme.danger, in: Capsule())
+                        .offset(x: -2, y: 2)
                 }
             }
         }
         .buttonStyle(SoftPress())
     }
 
-    private var newBookingCount: Int {
-        fb.myBraider?.reviewCount ?? 0
+    .task {
+        if let braiderId = fb.myBraider?.id, !braiderId.isEmpty {
+            _ = await fb.fetchBookings(forBraiderId: braiderId)
+        }
     }
-}

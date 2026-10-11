@@ -30,8 +30,8 @@ struct Braider: Identifiable, Hashable {
     var businessAddress: Address
     var portfolio: [PortfolioItem]
     var services: [BraidService]
-    var availableSlots: [String: [String]]      // legacy — used as fallback
-    var availableDates: [Date]                   // legacy — used as fallback
+    var availableSlots: [String: [String]]
+    var availableDates: [Date]
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -118,7 +118,7 @@ struct PortfolioItem: Identifiable, Hashable {
     }
 }
 
-// MARK: - Service (with per-service availability)
+// MARK: - Service
 
 struct BraidService: Identifiable, Hashable {
     let id: String
@@ -157,7 +157,6 @@ struct BraidService: Identifiable, Hashable {
         )
     }
 
-    /// True if any date has at least one time slot
     var hasAvailability: Bool {
         !availableDates.isEmpty && availableSlots.values.contains { !$0.isEmpty }
     }
@@ -176,24 +175,10 @@ struct Review: Identifiable, Hashable {
     let styleDone: String
     let helpful: Int
 
-    var dictionary: [String: Any] {
-        [
-            "id": id,
-            "userId": userId,
-            "userName": userName,
-            "userAvatar": userAvatar,
-            "text": text,
-            "rating": rating,
-            "date": date,
-            "styleDone": styleDone,
-            "helpful": helpful
-        ]
-    }
-
     var dateString: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: date, relativeTo: Date())
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .full
+        return f.localizedString(for: date, relativeTo: Date())
     }
 }
 
@@ -242,4 +227,16 @@ struct Booking: Identifiable, Codable {
     let price: Int
     let status: String
     let createdAt: Date
+    let cancellationReason: String?
+    let cancellationRequestedAt: Date?
+}
+
+// MARK: - Chat
+
+struct ChatMessage: Identifiable, Hashable {
+    let id: String
+    let senderId: String
+    let senderName: String
+    let text: String
+    let timestamp: Date
 }

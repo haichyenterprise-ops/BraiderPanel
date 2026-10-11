@@ -6,11 +6,18 @@ struct ContentView: View {
 
     @State private var needsOnboarding = false
     @State private var isCheckingProfile = true
+    @State private var showSignOutIsolation = false
 
     var body: some View {
         Group {
             if !session.isInitialized || isCheckingProfile {
                 splash
+            } else if showSignOutIsolation {
+                SignOutIsolationView(appName: "BraiderPanel") {
+                    showSignOutIsolation = false
+                    session.signOut()
+                }
+                .transition(.opacity)
             } else if !session.isSignedIn {
                 AuthView()
                     .transition(.opacity)
@@ -29,6 +36,7 @@ struct ContentView: View {
         .background(AppTheme.cloud.ignoresSafeArea())
         .animation(.easeInOut(duration: 0.5), value: session.isSignedIn)
         .animation(.easeInOut(duration: 0.5), value: needsOnboarding)
+        .animation(.easeInOut(duration: 0.35), value: showSignOutIsolation)
         .task(id: session.uid) {
             await checkOnboarding()
         }
@@ -37,7 +45,6 @@ struct ContentView: View {
     private var splash: some View {
         ZStack {
             AppTheme.cloud.ignoresSafeArea()
-
             VStack(spacing: 24) {
                 ZStack {
                     Circle()
@@ -48,7 +55,6 @@ struct ContentView: View {
                         .font(.system(size: 34, weight: .medium))
                         .foregroundColor(.white)
                 }
-
                 VStack(spacing: 6) {
                     Text("BraiderPanel")
                         .font(AppTheme.serif(30))
@@ -57,7 +63,6 @@ struct ContentView: View {
                         .font(AppTheme.sans(14))
                         .foregroundColor(AppTheme.slate)
                 }
-
                 ProgressView()
                     .tint(AppTheme.accent)
                     .padding(.top, 8)
@@ -70,6 +75,7 @@ struct ContentView: View {
             await MainActor.run {
                 needsOnboarding = false
                 isCheckingProfile = true
+                showSignOutIsolation = false
             }
             return
         }
@@ -88,6 +94,7 @@ struct ContentView: View {
             await MainActor.run {
                 needsOnboarding = !onboarded
                 isCheckingProfile = false
+                showSignOutIsolation = false
             }
         } catch {
             print("[ContentView] onboarding check failed:", error)

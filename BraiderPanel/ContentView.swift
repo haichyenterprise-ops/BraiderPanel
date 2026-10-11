@@ -6,21 +6,16 @@ struct ContentView: View {
 
     @State private var needsOnboarding = false
     @State private var isCheckingProfile = true
-    @State private var showSignOutIsolation = false
 
     var body: some View {
         Group {
-            if !session.isInitialized || isCheckingProfile {
+            if !session.isInitialized {
                 splash
-            } else if showSignOutIsolation {
-                SignOutIsolationView(appName: "BraiderPanel") {
-                    showSignOutIsolation = false
-                    session.signOut()
-                }
-                .transition(.opacity)
             } else if !session.isSignedIn {
                 AuthView()
                     .transition(.opacity)
+            } else if isCheckingProfile {
+                splash
             } else if needsOnboarding {
                 OnboardingFlow {
                     withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
@@ -34,9 +29,9 @@ struct ContentView: View {
             }
         }
         .background(AppTheme.cloud.ignoresSafeArea())
-        .animation(.easeInOut(duration: 0.5), value: session.isSignedIn)
-        .animation(.easeInOut(duration: 0.5), value: needsOnboarding)
-        .animation(.easeInOut(duration: 0.35), value: showSignOutIsolation)
+        .animation(.easeInOut(duration: 0.35), value: session.isSignedIn)
+        .animation(.easeInOut(duration: 0.35), value: needsOnboarding)
+        .animation(.easeInOut(duration: 0.35), value: isCheckingProfile)
         .task(id: session.uid) {
             await checkOnboarding()
         }
@@ -74,14 +69,18 @@ struct ContentView: View {
         guard session.isSignedIn else {
             await MainActor.run {
                 needsOnboarding = false
-                isCheckingProfile = true
-                showSignOutIsolation = false
+                isCheckingProfile = false
             }
             return
         }
 
         let uid = session.uid
-        guard !uid.isEmpty else { return }
+        guard !uid.isEmpty else {
+            await MainActor.run { isCheckingProfile = false }
+            return
+        }
+
+        await MainActor.run { isCheckingProfile = true }
 
         do {
             let snap = try await FirebaseManager.shared.db
@@ -94,10 +93,8 @@ struct ContentView: View {
             await MainActor.run {
                 needsOnboarding = !onboarded
                 isCheckingProfile = false
-                showSignOutIsolation = false
             }
         } catch {
-            print("[ContentView] onboarding check failed:", error)
             await MainActor.run {
                 needsOnboarding = true
                 isCheckingProfile = false

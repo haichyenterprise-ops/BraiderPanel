@@ -51,7 +51,7 @@ struct SettingsSheet: View {
                 Button("Sign out", role: .destructive) {
                     dismiss()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        session.signOut()
+                        SessionManager.shared.hardSignOut()
                     }
                 }
                 Button("Cancel", role: .cancel) {}

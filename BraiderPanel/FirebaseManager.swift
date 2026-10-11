@@ -134,20 +134,33 @@ enum BraiderMapper {
             )
         }
 
-        let services: [BraidService] = servicesRaw.compactMap { s in
-            guard let sid = s["id"] as? String,
-                  let name = s["name"] as? String else { return nil }
-            return BraidService(
-                id: sid,
-                name: name,
-                description: (s["description"] as? String) ?? "",
-                imageUrl: (s["imageUrl"] as? String) ?? "",
-                priceFrom: (s["priceFrom"] as? Int) ?? 0,
-                durationMinutes: (s["durationMinutes"] as? Int) ?? 120,
-                includes: (s["includes"] as? [String]) ?? [],
-                popular: (s["popular"] as? Bool) ?? false
-            )
+        let services: [BraidService] = servicesRaw.compactMap { s -> BraidService? in
+    guard let sid = s["id"] as? String,
+          let name = s["name"] as? String else { return nil }
+
+    let serviceDates: [Date] = {
+        if let d = s["availableDates"] as? [Date] { return d }
+        if let ts = s["availableDates"] as? [Timestamp] {
+            return ts.map { $0.dateValue() }
         }
+        return []
+    }()
+
+    let serviceSlots = (s["availableSlots"] as? [String: [String]]) ?? [:]
+
+    return BraidService(
+        id: sid,
+        name: name,
+        description: (s["description"] as? String) ?? "",
+        imageUrl: (s["imageUrl"] as? String) ?? "",
+        priceFrom: (s["priceFrom"] as? Int) ?? 0,
+        durationMinutes: (s["durationMinutes"] as? Int) ?? 120,
+        includes: (s["includes"] as? [String]) ?? [],
+        popular: (s["popular"] as? Bool) ?? false,
+        availableDates: serviceDates,
+        availableSlots: serviceSlots
+    )
+}
 
         let privateAddr = AddressMapper.from(data["privateAddress"] as? [String: Any])
         let businessAddr = AddressMapper.from(data["businessAddress"] as? [String: Any])

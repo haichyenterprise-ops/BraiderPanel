@@ -3,12 +3,20 @@ options:
   bundleIdPrefix: com.example
   deploymentTarget:
     iOS: "17.0"
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: 10.22.0
 targets:
   BraiderPanel:
     type: application
     platform: iOS
     sources:
-      - BraiderPanel
+      - path: BraiderPanel
+        excludes:
+          - "Info.plist"
+      - path: BraiderPanel/GoogleService-Info.plist
+        buildPhase: resources
     info:
       path: BraiderPanel/Info.plist
       properties:
@@ -24,8 +32,9 @@ targets:
           NSAllowsLocalNetworking: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-          - UIInterfaceOrientationLandscapeLeft
-          - UIInterfaceOrientationLandscapeRight
+        NSLocationWhenInUseUsageDescription: "BraiderPanel uses your location to place you on the customer map."
+        NSPhotoLibraryUsageDescription: "BraiderPanel needs access to your photos to add portfolio images and your profile picture."
+        NSCameraUsageDescription: "BraiderPanel uses your camera to take profile photos."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.BraiderPanel
@@ -36,3 +45,8 @@ targets:
         CODE_SIGN_IDENTITY: ""
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
+    dependencies:
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseAuth
